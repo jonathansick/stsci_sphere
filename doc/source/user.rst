@@ -13,6 +13,12 @@ Requirements
 
 - Numpy 1.4 or later
 
+- PyFITS
+
+- PyWCS
+
+- STWCS
+
 Coordinate representation
 -------------------------
 
@@ -135,6 +141,14 @@ operations available:
   - `~SphericalPolygon.overlap`: Determine how much a given polygon
     overlaps another.
 
+  - `~SphericalPolygon.to_radec`: Convert (*x*, *y*, *z*) points in the
+    polygon to (*ra*, *dec*) points.
+
+  - `~SphericalPolygon.same_points_as`: Determines if one polygon has the
+    same points as another. When only sorted unique points are considered
+    (default behavior), polygons with same points might not be the same
+    polygons because the order of the points matter.
+
   - `~SphericalPolygon.draw`: Plots the polygon using matplotlib’s
     Basemap toolkit.  This feature is rather bare and intended
     primarily for debugging purposes.
@@ -158,3 +172,78 @@ functions that are useful for dealing with them.
 - `angle`: Calculate the angle between two great circle arcs.
 
 - `midpoint`: Calculate the midpoint along a great circle arc.
+
+Skylines
+--------
+
+Skylines are designed to capture and manipulate HST WCS image information as
+spherical polygons. They are represented by the `~sphere.skyline.SkyLine` class,
+which is an extension of `~sphere.polygon.SphericalPolygon` class.
+
+Representation
+``````````````
+Each skyline has a list of members, `~sphere.skyline.SkyLine.members`, and a
+composite spherical polygon, `~sphere.skyline.SkyLine.polygon`, defined by those
+members. The polygon has all the functionalities of
+`~sphere.polygon.SphericalPolygon`.
+
+What is a skyline member?
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Each member in `~sphere.skyline.SkyLine.members` belongs to the
+`~sphere.skyline.SkyLineMember` class, which contains image name (with path if
+given), science extension, and WCS object and polygon of that extension.
+
+For example, an ACS/WFC full-frame image would give 2 members, one from EXT 1
+and another from EXT 4.
+
+Creating skylines
+`````````````````
+
+`~sphere.skyline.SkyLine` constructor takes an image name and an optional
+`extname` keyword, which defaults to "SCI". To create skyline from
+single-extension FITS, change `extname` to "PRIMARY".
+
+If `None` is given instead of image name, an empty skyline is created with no
+member and an empty spherical polygon.
+
+Operations on skylines
+``````````````````````
+
+`~sphere.skyline.SkyLine` has direct access to most of the
+`~sphere.polygon.SphericalPolygon` properties and methods *except* for the
+following (which are still accessible indirectly via
+`~sphere.skyline.SkyLine.polygon`):
+
+  - `~sphere.polygon.SphericalPolygon.from_radec`
+  - `~sphere.polygon.SphericalPolygon.from_cone`
+  - `~sphere.polygon.SphericalPolygon.from_wcs`
+  - `~sphere.polygon.SphericalPolygon.multi_union`
+  - `~sphere.polygon.SphericalPolygon.multi_intersection`
+
+In addition, `~sphere.skyline.SkyLine` also has these operations available:
+
+  - `~sphere.skyline.SkyLine.to_wcs`: Return a composite HST WCS object defined
+    by all the members.
+
+  - `~sphere.skyline.SkyLine.add_image`: Return a new skyline that is the union
+    of two skylines. This should be used, *not* `SkyLine.union` (which is
+    actually `~sphere.polygon.SphericalPolygon.union`) that will not include
+    members.
+
+  - `~sphere.skyline.SkyLine.find_intersection`: Return a new skyline that is
+    the intersection of two skylines. This should be used, *not*
+    `SkyLine.intersection` (which is actually
+    `~sphere.polygon.SphericalPolygon.intersection`) that will not include
+    members.
+
+  - `~sphere.skyline.SkyLine.find_max_overlap` and
+    `~sphere.skyline.SkyLine.max_overlap_pair`: Return a pair of skylines that
+    overlap the most from a given list of skylines.
+
+  - `~sphere.skyline.SkyLine.mosaic`: Return a new skyline that is a mosaic of
+    given skylines that overlap, a list of image names of the skylines used, and
+    a list of image names of the excluded skylines. A pair of skylines with the
+    most overlap is used as a starting point. Then a skyline that overlaps the
+    most with the mosaic is used, and so forth until no overlapping skyline is
+    found.

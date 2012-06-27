@@ -53,138 +53,145 @@ try:
 except ImportError:
     HAS_C_UFUNCS = False
 
+if HAS_C_UFUNCS:
+    inner1d = math_util.inner1d
+else:
+    from numpy.core.umath_tests import inner1d
+
 
 __all__ = ['angle', 'intersection', 'intersects', 'length', 'midpoint',
            'interpolate']
 
 
-if not HAS_C_UFUNCS:
-    from numpy.core.umath_tests import inner1d
+def _fast_cross(a, b):
+    """
+    This is a reimplementation of `numpy.cross` that only does 3D x
+    3D, and is therefore faster since it doesn't need any
+    conditionals.
+    """
+    if HAS_C_UFUNCS:
+        return math_util.cross(a, b)
+    
+    cp = np.empty(np.broadcast(a, b).shape)
+    aT = a.T
+    bT = b.T
+    cpT = cp.T
 
-    def _fast_cross(a, b):
-        """
-        This is a reimplementation of `numpy.cross` that only does 3D x
-        3D, and is therefore faster since it doesn't need any
-        conditionals.
-        """
-        cp = np.empty(np.broadcast(a, b).shape)
-        aT = a.T
-        bT = b.T
-        cpT = cp.T
+    cpT[0] = aT[1]*bT[2] - aT[2]*bT[1]
+    cpT[1] = aT[2]*bT[0] - aT[0]*bT[2]
+    cpT[2] = aT[0]*bT[1] - aT[1]*bT[0]
 
-        cpT[0] = aT[1]*bT[2] - aT[2]*bT[1]
-        cpT[1] = aT[2]*bT[0] - aT[0]*bT[2]
-        cpT[2] = aT[0]*bT[1] - aT[1]*bT[0]
+    return cp
 
-        return cp
+def _cross_and_normalize(A, B):
+    if HAS_C_UFUNCS:
+        return math_util.cross_and_norm(A, B)
 
-    def _cross_and_normalize(A, B):
-        T = _fast_cross(A, B)
-        # Normalization
-        l = np.sqrt(np.sum(T ** 2, axis=-1))
-        l = np.expand_dims(l, 2)
-        # Might get some divide-by-zeros, but we don't care
-        with np.errstate(invalid='ignore'):
-            TN = T / l
-        return TN
+    T = _fast_cross(A, B)
+    # Normalization
+    l = np.sqrt(np.sum(T ** 2, axis=-1))
+    l = np.expand_dims(l, 2)
+    # Might get some divide-by-zeros, but we don't care
+    with np.errstate(invalid='ignore'):
+        TN = T / l
+    return TN
 
-    def intersection(A, B, C, D):
-        r"""
-        Returns the point of intersection between two great circle arcs.
-        The arcs are defined between the points *AB* and *CD*.  Either *A*
-        and *B* or *C* and *D* may be arrays of points, but not both.
 
-        Parameters
-        ----------
-        A, B : (*x*, *y*, *z*) triples or Nx3 arrays of triples
-            Endpoints of the first great circle arc.
+def intersection(A, B, C, D):
+    r"""
+    Returns the point of intersection between two great circle arcs.
+    The arcs are defined between the points *AB* and *CD*.  Either *A*
+    and *B* or *C* and *D* may be arrays of points, but not both.
 
-        C, D : (*x*, *y*, *z*) triples or Nx3 arrays of triples
-            Endpoints of the second great circle arc.
+    Parameters
+    ----------
+    A, B : (*x*, *y*, *z*) triples or Nx3 arrays of triples
+        Endpoints of the first great circle arc.
 
-        Returns
-        -------
-        T : (*x*, *y*, *z*) triples or Nx3 arrays of triples
-            If the given arcs intersect, the intersection is returned.  If
-            the arcs do not intersect, the triple is set to all NaNs.
+    C, D : (*x*, *y*, *z*) triples or Nx3 arrays of triples
+        Endpoints of the second great circle arc.
 
-        Notes
-        -----
-        The basic intersection is computed using linear algebra as follows
-        [1]_:
+    Returns
+    -------
+    T : (*x*, *y*, *z*) triples or Nx3 arrays of triples
+        If the given arcs intersect, the intersection is returned.  If
+        the arcs do not intersect, the triple is set to all NaNs.
 
-        .. math::
+    Notes
+    -----
+    The basic intersection is computed using linear algebra as follows
+    [1]_:
 
-            T = \lVert(A × B) × (C × D)\rVert
+    .. math::
 
-        To determine the correct sign (i.e. hemisphere) of the
-        intersection, the following four values are computed:
+        T = \lVert(A × B) × (C × D)\rVert
 
-        .. math::
+    To determine the correct sign (i.e. hemisphere) of the
+    intersection, the following four values are computed:
 
-            s_1 = ((A × B) × A) · T
+    .. math::
 
-            s_2 = (B × (A × B)) · T
+        s_1 = ((A × B) × A) · T
 
-            s_3 = ((C × D) × C) · T
+        s_2 = (B × (A × B)) · T
 
-            s_4 = (D × (C × D)) · T
+        s_3 = ((C × D) × C) · T
 
-        For :math:`s_n`, if all positive :math:`T` is returned as-is.  If
-        all negative, :math:`T` is multiplied by :math:`-1`.  Otherwise
-        the intersection does not exist and is undefined.
+        s_4 = (D × (C × D)) · T
 
-        References
-        ----------
+    For :math:`s_n`, if all positive :math:`T` is returned as-is.  If
+    all negative, :math:`T` is multiplied by :math:`-1`.  Otherwise
+    the intersection does not exist and is undefined.
 
-        .. [1] Method explained in an `e-mail
-           <http://www.mathworks.com/matlabcentral/newsreader/view_thread/276271>`_
-           by Roger Stafford.
+    References
+    ----------
 
-        http://www.mathworks.com/matlabcentral/newsreader/view_thread/276271
-        """
-        A = np.asanyarray(A)
-        B = np.asanyarray(B)
-        C = np.asanyarray(C)
-        D = np.asanyarray(D)
+    .. [1] Method explained in an `e-mail
+        <http://www.mathworks.com/matlabcentral/newsreader/view_thread/276271>`_
+        by Roger Stafford.
 
-        A, B = np.broadcast_arrays(A, B)
-        C, D = np.broadcast_arrays(C, D)
+    http://www.mathworks.com/matlabcentral/newsreader/view_thread/276271
+    """
+    if HAS_C_UFUNCS:
+        return math_util.intersection(A, B, C, D)
+    
+    A = np.asanyarray(A)
+    B = np.asanyarray(B)
+    C = np.asanyarray(C)
+    D = np.asanyarray(D)
 
-        ABX = _fast_cross(A, B)
-        CDX = _fast_cross(C, D)
-        T = _cross_and_normalize(ABX, CDX)
-        T_ndim = len(T.shape)
+    A, B = np.broadcast_arrays(A, B)
+    C, D = np.broadcast_arrays(C, D)
 
-        if T_ndim > 1:
-            s = np.zeros(T.shape[0])
-        else:
-            s = np.zeros(1)
-        s += np.sign(inner1d(_fast_cross(ABX, A), T))
-        s += np.sign(inner1d(_fast_cross(B, ABX), T))
-        s += np.sign(inner1d(_fast_cross(CDX, C), T))
-        s += np.sign(inner1d(_fast_cross(D, CDX), T))
-        if T_ndim > 1:
-            s = np.expand_dims(s, 2)
+    ABX = _fast_cross(A, B)
+    CDX = _fast_cross(C, D)
+    T = _cross_and_normalize(ABX, CDX)
+    T_ndim = len(T.shape)
 
-        cross = np.where(s == -4, -T, np.where(s == 4, T, np.nan))
+    if T_ndim > 1:
+        s = np.zeros(T.shape[0])
+    else:
+        s = np.zeros(1)
+    s += np.sign(inner1d(_fast_cross(ABX, A), T))
+    s += np.sign(inner1d(_fast_cross(B, ABX), T))
+    s += np.sign(inner1d(_fast_cross(CDX, C), T))
+    s += np.sign(inner1d(_fast_cross(D, CDX), T))
+    if T_ndim > 1:
+        s = np.expand_dims(s, 2)
 
-        # If they share a common point, it's not an intersection.  This
-        # gets around some rounding-error/numerical problems with the
-        # above.
-        equals = (np.all(A == C, axis = -1) |
-                  np.all(A == D, axis = -1) |
-                  np.all(B == C, axis = -1) |
-                  np.all(B == D, axis = -1))
+    cross = np.where(s == -4, -T, np.where(s == 4, T, np.nan))
 
-        equals = np.expand_dims(equals, 2)
+    # If they share a common point, it's not an intersection.  This
+    # gets around some rounding-error/numerical problems with the
+    # above.
+    equals = (np.all(A == C, axis = -1) |
+              np.all(A == D, axis = -1) |
+              np.all(B == C, axis = -1) |
+              np.all(B == D, axis = -1))
 
-        return np.where(equals, np.nan, cross)
-else:
-    inner1d = math_util.inner1d
-    _fast_cross = math_util.cross
-    _cross_and_normalize = math_util.cross_and_norm
-    intersection = math_util.intersection
+    equals = np.expand_dims(equals, 2)
+
+    return np.where(equals, np.nan, cross)
 
 
 def length(A, B, degrees=True):
@@ -261,7 +268,8 @@ def angle(A, B, C, degrees=True):
 
     Parameters
     ----------
-    A, B, C : (*x*, *y*, *z*) triples or Nx3 arrays of triples.
+    A, B, C : (*x*, *y*, *z*) triples or Nx3 arrays of triples
+        Points on sphere.
 
     degrees : bool, optional
         If `True` (default) the result is returned in decimal degrees,

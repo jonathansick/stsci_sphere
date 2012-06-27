@@ -28,3 +28,9 @@ Graph operations on polygons
 
 .. automodule:: sphere.graph
    :members:
+
+Skylines
+--------
+
+.. automodule:: sphere.skyline
+   :members:

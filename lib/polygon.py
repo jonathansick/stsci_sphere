@@ -115,12 +115,14 @@ class SphericalPolygon(object):
         return self._inside
 
     def to_radec(self):
-        """Convert `SphericalPolygon` footprint to RA and DEC.
+        """
+        Convert `SphericalPolygon` footprint to RA and DEC.
 
         Returns
         -------
-        List of RA and DEC pairs (in degrees) corresponding to
-        `self.points`.
+        zip(ra,dec) : list of tuples
+            List of (*ra*, *dec*) pairs in degrees corresponding
+            to `points`.
         """
         ra, dec = vector.vector_to_radec(self.points[:,0], self.points[:,1],
                                          self.points[:,2], degrees=True)
@@ -314,7 +316,7 @@ class SphericalPolygon(object):
 
         Parameters
         ----------
-        preserve_order: bool
+        preserve_order : bool
             Preserve original order? If `True`, polygon is
             rotated around min point. If `False`, all points
             are sorted in ascending order.
@@ -361,7 +363,8 @@ class SphericalPolygon(object):
 
         Returns
         -------
-        `True` or `False`
+        is_eq : bool
+            `True` or `False`.
         """
         self_n = len(self.points)
         

@@ -60,14 +60,14 @@ class Graph:
 
     .. note::
        This class is not meant to be used directly.  Instead, use
-       `sphere.polygon.SphericalPolygon.union` and
-       `sphere.polygon.SphericalPolygon.intersection`.
+       `~sphere.polygon.SphericalPolygon.union` and
+       `~sphere.polygon.SphericalPolygon.intersection`.
     """
 
     class Node:
-        """
-        A `Node` represents a single point, connected by an arbitrary
-        number of `Edge` objects to other `Node` objects.
+        """       
+        A `~Graph.Node` represents a single point, connected by an arbitrary
+        number of `~Graph.Edge` objects to other `~Graph.Node` objects.
         """
         def __init__(self, point, source_polygons=[]):
             """
@@ -91,12 +91,12 @@ class Graph:
 
             Parameters
             ----------
-            edge : `Edge` instance
+            edge : `~Graph.Edge` instance
                 The edge to follow away from.
 
             Returns
             -------
-            other : `Edge` instance
+            other : `~Graph.Edge` instance
                 The other edge.
             """
             edges = list(self._edges)
@@ -109,11 +109,14 @@ class Graph:
         def equals(self, other, thres=2e-8):
             """
             Returns `True` if the location of this and the *other*
-            `Node` are the same.
+            `~Graph.Node` are the same.
 
             Parameters
             ----------
-            thres: float
+            other : `~Graph.Node` instance
+                The other node.
+
+            thres : float
                 If difference is smaller than this, points are equal.
                 The default value of 2e-8 radians is set based on
                 emphirical test cases. Relative threshold based on
@@ -126,14 +129,14 @@ class Graph:
 
     class Edge:
         """
-        An `Edge` represents a connection between exactly two `Node`
-        objects.  This `Edge` class has no direction.
+        An `~Graph.Edge` represents a connection between exactly two
+        `~Graph.Node` objects.  This `~Graph.Edge` class has no direction.
         """
         def __init__(self, A, B, source_polygons=[]):
             """
             Parameters
             ----------
-            A, B : `Node` instances
+            A, B : `~Graph.Node` instances
 
             source_polygon : `~sphere.polygon.SphericalPolygon` instance, optional
                 The polygon this edge came from.  Used for bookkeeping.
@@ -154,11 +157,11 @@ class Graph:
 
             Parameters
             ----------
-            node : `Node` instance
+            node : `~Graph.Node` instance
 
             Returns
             -------
-            other : `Node` instance
+            other : `~Graph.Node` instance
             """
             nodes = self._nodes
             try:
@@ -168,11 +171,11 @@ class Graph:
 
         def equals(self, other):
             """
-            Returns True if the other edge is between the same two nodes.
+            Returns `True` if the other edge is between the same two nodes.
 
             Parameters
             ----------
-            other : `Edge` instance
+            other : `~Graph.Edge` instance
 
             Returns
             -------
@@ -261,7 +264,7 @@ class Graph:
 
         Returns
         -------
-        node : `Node` instance
+        node : `~Graph.Node` instance
             The new node
         """
         new_node = self.Node(point, source_polygons)
@@ -285,7 +288,7 @@ class Graph:
 
         Parameters
         ----------
-        node : `Node` instance
+        node : `~Graph.Node` instance
         """
         assert node in self._nodes
 
@@ -304,14 +307,14 @@ class Graph:
 
         Parameters
         ----------
-        A, B : `Node` instances
+        A, B : `~Graph.Node` instances
 
         source_polygons : `~sphere.polygon.SphericalPolygon` instance, optional
             The polygon(s) this edge came from.  Used for bookkeeping.
 
         Returns
         -------
-        edge : `Edge` instance
+        edge : `~Graph.Edge` instance
             The new edge
         """
         assert A in self._nodes
@@ -338,7 +341,7 @@ class Graph:
 
         Parameters
         ----------
-        edge : `Edge` instance
+        edge : `~Graph.Edge` instance
         """
         assert edge in self._edges
 
@@ -354,21 +357,22 @@ class Graph:
 
     def split_edge(self, edge, node):
         """
-        Splits an `Edge` *edge* at `Node` *node*, removing *edge* and
-        replacing it with two new `Edge` instances.  It is intended
-        that *E* is along the original edge, but that is not enforced.
+        Splits an `~Graph.Edge` *edge* at `~Graph.Node` *node*, removing
+        *edge* and replacing it with two new `~Graph.Edge` instances.
+        It is intended that *E* is along the original edge, but that is
+        not enforced.
 
         Parameters
         ----------
-        edge : `Edge` instance
+        edge : `~Graph.Edge` instance
             The edge to split
 
-        node : `Node` instance
+        node : `~Graph.Node` instance
             The node to insert
 
         Returns
         -------
-        edgeA, edgeB : `Edge` instances
+        edgeA, edgeB : `~Graph.Edge` instances
             The two new edges on either side of *node*.
         """
         assert edge in self._edges

@@ -33,11 +33,9 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
-Manage outlines on the sky.
-
 This module provides support for working with footprints
 on the sky. Primary use case would use the following
-generalized steps::
+generalized steps:
 
     #. Initialize `SkyLine` objects for each input image.
        This object would be the union of all the input
@@ -72,16 +70,6 @@ This process will work reasonably fast as most operations
 are performed using the `SkyLine` objects and WCS information
 solely, not image data itself.
 
-.. note:: Requires Python 2.7 or later.
-
-:Authors: Pey Lian Lim, Warren Hack, Michael Droettboom
-
-:Organization: Space Telescope Science Institute
-
-:History:
-    * 2012-05-25 PLL started coding. Original class
-      structure by WJH. Parent class by MD.
-
 """
 from __future__ import division, print_function, absolute_import
 
@@ -96,26 +84,28 @@ from stwcs.distortion.utils import output_wcs
 # LOCAL
 from .polygon import SphericalPolygon
 
-__all__ = ['SkyLine']
+__all__ = ['SkyLineMember', 'SkyLine']
 __version__ = '0.3a'
 __vdate__ = '20-Jun-2012'
 
 class SkyLineMember(object):
+    """
+    Container for `SkyLine` members with these attributes:
+    
+        * `fname`: Image name (with path if given)
+        * `ext`: Extension read
+        * `wcs`: `HSTWCS` object the data data
+        * `polygon`: `~sphere.polygon.SphericalPolygon` object of the data
 
+    """
     def __init__(self, fname, ext):
         """
-        Container for `SkyLine` members.
-
-        Given FITS image and extension, will store its
-        `SphericalPolygon` instance from WCS under
-        `polygon`.
-
         Parameters
         ----------
-        fname: str
+        fname : str
             FITS image.
 
-        ext: int
+        ext : int
             Image extension.
 
         """
@@ -145,17 +135,22 @@ class SkyLineMember(object):
         return self._polygon
 
 class SkyLine(object):
+    """
+    Manage outlines on the sky.
 
+    Each `SkyLine` has a list of `~SkyLine.members` and
+    a composite `~SkyLine.polygon` with all the
+    functionalities of `~sphere.polygon.SphericalPolygon`.
+
+    """
     def __init__(self, fname, extname='SCI'):
         """
-        Initialize `SkyLine` object instance.
-
         Parameters
         ----------
-        fname: str
+        fname : str
             FITS image. `None` to create empty `SkyLine`.
 
-        extname: str
+        extname : str
             EXTNAME to use. SCI is recommended for normal
             HST images. PRIMARY if image is single ext.
 
@@ -179,7 +174,7 @@ class SkyLine(object):
             self.polygon = SphericalPolygon([])
 
     def __getattr__(self, what):
-        """Control attribute access to `SphericalPolygon`."""
+        """Control attribute access to `~sphere.polygon.SphericalPolygon`."""
         if what in ('from_radec', 'from_cone', 'from_wcs',
                     'multi_union', 'multi_intersection',
                     '_find_new_inside',):
@@ -197,23 +192,31 @@ class SkyLine(object):
 
     @property
     def polygon(self):
-        """`SphericalPolygon` portion of `SkyLine`."""
+        """
+        `~sphere.polygon.SphericalPolygon` portion of `SkyLine`
+        that contains the composite skyline from `members`
+        belonging to *self*.
+
+        """
         return self._polygon
 
     @polygon.setter
     def polygon(self, value):
-        """Deep copy a `SphericalPolygon`."""
         assert isinstance(value, SphericalPolygon)
-        self._polygon = copy(value)
+        self._polygon = copy(value)  # Deep copy
 
     @property
     def members(self):
-        """List of `SkyLineMember` objects."""
+        """
+        List of `SkyLineMember` objects that belong to *self*.
+        Duplicate members are discarded. Members are kept in
+        the order of their additions to *self*.
+
+        """
         return self._members
 
     @members.setter
     def members(self, values):
-        """Make sure `SkyLineMember` entries are unique."""
         self._members = []
 
         # Not using set to preserve order
@@ -226,8 +229,8 @@ class SkyLine(object):
 
     def to_wcs(self):
         """
-        Combine WCS objects from all `members` and return a
-        new WCS object. If no `members`, return `None`.
+        Combine `HSTWCS` objects from all `members` and return
+        a new `HSTWCS` object. If no `members`, return `None`.
 
         """
         wcs = None
@@ -244,15 +247,15 @@ class SkyLine(object):
 
         Parameters
         ----------
-        self: obj
+        self : obj
             `SkyLine` instance.
 
-        given_members: list
+        given_members : list
             List of `SkyLineMember` to consider.
 
         Returns
         -------
-        new_members: list
+        new_members : list
             List of `SkyLineMember` belonging to *self*.
 
         """
@@ -310,16 +313,16 @@ class SkyLine(object):
 
         Parameters
         ----------
-        skylines: list
+        skylines : list
             A list of `SkyLine` instances.
 
         Returns
         -------
-        max_skyline: `SkyLine` instance or `None`
+        max_skyline : `SkyLine` instance or `None`
             `SkyLine` that overlaps the most or `None` if no
             overlap found. This is *not* a copy.
 
-        max_overlap_area: float
+        max_overlap_area : float
             Area of intersection.
         
         """
@@ -342,13 +345,13 @@ class SkyLine(object):
 
         Parameters
         ----------
-        skylines: list
+        skylines : list
             A list of `SkyLine` instances.
 
         Returns
         -------
-        max_pair: tuple
-            Pair of `SkyLine` instances with max overlap
+        max_pair : tuple
+            Pair of `SkyLine` objects with max overlap
             among given *skylines*. If no overlap found,
             return `None`. These are *not* copies.
 
@@ -371,24 +374,29 @@ class SkyLine(object):
         """
         Mosaic all overlapping *skylines*.
 
+        A pair of skylines with the most overlap is used as
+        a starting point. Then a skyline that overlaps the
+        most with the mosaic is used, and so forth until no
+        overlapping skyline is found.
+
         Parameters
         ----------
-        skylines: list
-            A list of `SkyLine` instances.
+        skylines : list
+            A list of `SkyLine` objects.
 
         Returns
         -------
-        mosaic: `SkyLine` instance or `None`
+        mosaic : `SkyLine` instance or `None`
             Union of all overlapping *skylines*, or `None` if
             no overlap found.
 
-        included: list
-            List of image names added to `mosaic` in the order
+        included : list
+            List of image names added to mosaic in the order
             of addition.
 
-        excluded: list
+        excluded : list
             List of image names excluded because they do not
-            overlap with `mosaic`.
+            overlap with mosaic.
 
         """
         out_order = []

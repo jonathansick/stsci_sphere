@@ -88,33 +88,53 @@ from .polygon import SphericalPolygon
 SKYLINE_DEBUG = True
 
 __all__ = ['SkyLineMember', 'SkyLine']
-__version__ = '0.3a'
-__vdate__ = '10-Jul-2012'
+__version__ = '0.4a'
+__vdate__ = '11-Jul-2012'
 
 class SkyLineMember(object):
     """
     Container for `SkyLine` members with these attributes:
     
         * `fname`: Image name (with path if given)
-        * `ext`: Extension read
-        * `wcs`: `HSTWCS` object the data data
-        * `polygon`: `~sphere.polygon.SphericalPolygon` object of the data
+        * `ext`: Tuple of extensions read
+        * `wcs`: `HSTWCS` object the composite data
+        * `polygon`: `~sphere.polygon.SphericalPolygon` object of the composite data
 
     """
-    def __init__(self, fname, ext):
+    def __init__(self, fname, extname):
         """
         Parameters
         ----------
         fname : str
             FITS image.
 
-        ext : int
-            Image extension.
+        extname : str
+            EXTNAME to use. SCI is recommended for normal
+            HST images. PRIMARY if image is single ext.
 
         """
+        extname = extname.upper()
+        ext_list = []
+        wcs_list = []
+        
+        with pyfits.open(fname) as pf:
+            for i,ext in enumerate(pf):
+                if ext.name.upper() == extname:
+                    ext_list.append(i)
+                    wcs_list.append(wcsutil.HSTWCS(fname, ext=i))
+
+        # By combining WCS first before polygon, will remove chip gaps
+
+        n_wcs = len(wcs_list)
+        if n_wcs > 1:
+            self._wcs = output_wcs(wcs_list)
+        elif n_wcs == 1:
+            self._wcs = wcs_list[0]
+        else:
+            raise ValueError('%s has no WCS' % fname)
+
         self._fname = fname
-        self._ext = ext
-        self._wcs = wcsutil.HSTWCS(fname, ext=ext)
+        self._ext = tuple(ext_list)
         self._polygon = SphericalPolygon.from_wcs(self.wcs)
 
     def __repr__(self):
@@ -157,24 +177,22 @@ class SkyLine(object):
             EXTNAME to use. SCI is recommended for normal
             HST images. PRIMARY if image is single ext.
 
-        """
-        extname = extname.upper()
-        
+        """      
         # Convert SCI data to SkyLineMember
         if fname is not None:
-            with pyfits.open(fname) as pf:
-                self.members = [SkyLineMember(fname, i)
-                                for i,ext in enumerate(pf)
-                                if extname in ext.name.upper()]
+            self.members = [SkyLineMember(fname, extname)]
         else:
             self.members = []
 
         # Put mosaic of all the chips in SkyLine
-        if len(self.members) > 0:
-            self.polygon = SphericalPolygon.multi_union(
-                [m.polygon for m in self.members])
-        else:
+        n = len(self.members)
+        if n == 0:
             self.polygon = SphericalPolygon([])
+        elif n == 1:
+            self.polygon = copy(self.members[0].polygon)
+        else:
+            raise ValueError('%s cannot initialize polygon with '
+                             'multiple members' % self.__class__.__name__)
 
     def __getattr__(self, what):
         """Control attribute access to `~sphere.polygon.SphericalPolygon`."""
@@ -238,10 +256,16 @@ class SkyLine(object):
         .. warning:: This cannot return WCS of intersection.
 
         """
-        wcs = None
+        wcs_list = []
         
-        if len(self.members) > 0:
-            wcs = output_wcs([m.wcs for m in self.members])
+        for m in self.members:
+            for i in m.ext:
+                wcs_list.append(wcsutil.HSTWCS(m.fname, ext=i))
+
+        if len(wcs_list) > 0:
+            wcs = output_wcs(wcs_list)
+        else:
+            wcs = None
 
         return wcs
 
@@ -254,7 +278,8 @@ class SkyLine(object):
 
     def _draw_members(self, map, **kwargs):
         """
-        Draw individual members. Useful for debugging.
+        Draw individual extensions in members.
+        Useful for debugging.
 
         Parameters
         ----------
@@ -264,7 +289,9 @@ class SkyLine(object):
 
         """
         for m in self.members:
-            m.polygon.draw(map, **kwargs)
+            for i in m.ext:
+                poly = SphericalPolygon.from_wcs(wcsutil.HSTWCS(m.fname, ext=i))
+                poly.draw(map, **kwargs)
 
     def _find_members(self, given_members):
         """

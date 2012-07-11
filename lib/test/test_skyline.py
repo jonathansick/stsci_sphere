@@ -75,11 +75,9 @@ def test_membership():
     do_member_overlap(im_2chipB)
     do_member_overlap(im_66_tan)
 
-    assert len(im_2chipA.members) == 2
+    assert len(im_2chipA.members) == 1
     assert im_2chipA.members[0].fname == f_2chipA
-    assert im_2chipA.members[0].ext == 1
-    assert im_2chipA.members[1].fname == f_2chipA
-    assert im_2chipA.members[1].ext == 4
+    assert im_2chipA.members[0].ext == (1,4)
 
 
 #----- COPY -----
@@ -220,7 +218,7 @@ def DISABLED_unstable_overlap():
     u1 = im_2chipA.add_image(im_2chipB)
     u2 = im_2chipB.add_image(im_2chipA)
 
-    # failed here - known bug
+    # failed here before - known bug
     # failure not always the same due to hash mapping
     assert_almost_equal(i1.overlap(u1), 1.0)
     assert_almost_equal(i1.overlap(i2), 1.0)

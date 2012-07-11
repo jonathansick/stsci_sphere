@@ -192,10 +192,14 @@ What is a skyline member?
 
 Each member in `~sphere.skyline.SkyLine.members` belongs to the
 `~sphere.skyline.SkyLineMember` class, which contains image name (with path if
-given), science extension, and WCS object and polygon of that extension.
+given), science extension(s), and composite WCS and polygon of the extension(s).
+All skylines start out with a single member from a single image. When operations
+are used to find composite or intersecting skylines, the resulting skyline can
+have multiple members.
 
-For example, an ACS/WFC full-frame image would give 2 members, one from EXT 1
-and another from EXT 4.
+For example, a skyline from an ACS/WFC full-frame image would give 1 member,
+which is a composite of extensions 1 and 4. A skyline from the union of 2 such
+images would have 2 members, and so forth.
 
 Creating skylines
 `````````````````
@@ -224,7 +228,8 @@ following (which are still accessible indirectly via
 In addition, `~sphere.skyline.SkyLine` also has these operations available:
 
   - `~sphere.skyline.SkyLine.to_wcs`: Return a composite HST WCS object defined
-    by all the members.
+    by all the members. In a skyline resulting from intersection, this does
+    *not* return the WCS of the intersecting polygons.
 
   - `~sphere.skyline.SkyLine.add_image`: Return a new skyline that is the union
     of two skylines. This should be used, *not* `SkyLine.union` (which is

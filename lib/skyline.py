@@ -84,9 +84,12 @@ from stwcs.distortion.utils import output_wcs
 # LOCAL
 from .polygon import SphericalPolygon
 
+# DEBUG
+SKYLINE_DEBUG = True
+
 __all__ = ['SkyLineMember', 'SkyLine']
 __version__ = '0.3a'
-__vdate__ = '20-Jun-2012'
+__vdate__ = '10-Jul-2012'
 
 class SkyLineMember(object):
     """
@@ -232,6 +235,8 @@ class SkyLine(object):
         Combine `HSTWCS` objects from all `members` and return
         a new `HSTWCS` object. If no `members`, return `None`.
 
+        .. warning:: This cannot return WCS of intersection.
+
         """
         wcs = None
         
@@ -239,6 +244,27 @@ class SkyLine(object):
             wcs = output_wcs([m.wcs for m in self.members])
 
         return wcs
+
+    def _rough_id(self):
+        """Filename of first member."""
+        if len(self.members) > 0:
+            return self.members[0].fname
+        else:
+            return None
+
+    def _draw_members(self, map, **kwargs):
+        """
+        Draw individual members. Useful for debugging.
+
+        Parameters
+        ----------
+        map : Basemap axes object
+
+        **kwargs : Any plot arguments to pass to basemap
+
+        """
+        for m in self.members:
+            m.polygon.draw(map, **kwargs)
 
     def _find_members(self, given_members):
         """
@@ -274,6 +300,10 @@ class SkyLine(object):
         .. warning:: `SkyLine.union` only returns `polygon`
             without `members`.
 
+        Parameters
+        ----------
+        other : `SkyLine` object
+
         Examples
         --------
         >>> s1 = SkyLine('image1.fits')
@@ -293,6 +323,10 @@ class SkyLine(object):
 
         .. warning:: `SkyLine.intersection` only returns
             `polygon` without `members`.
+
+        Parameters
+        ----------
+        other : `SkyLine` object
 
         Examples
         --------
@@ -330,7 +364,17 @@ class SkyLine(object):
         max_overlap_area = 0.0
 
         for next_s in skylines:
-            overlap_area = self.intersection(next_s).area()
+            try:
+                overlap_area = self.intersection(next_s).area()
+            except (ValueError, AssertionError):
+                if SKYLINE_DEBUG:
+                    print('WARNING: Intersection failed for %s and %s. '
+                          'Ignoring %s...' % (self._rough_id(),
+                                              next_s._rough_id(),
+                                              next_s._rough_id()))
+                    overlap_area = 0.0
+                else:
+                    raise
 
             if overlap_area > max_overlap_area:
                 max_overlap_area = overlap_area
@@ -370,7 +414,7 @@ class SkyLine(object):
         return max_pair
 
     @classmethod
-    def mosaic(cls, skylines):
+    def mosaic(cls, skylines, verbose=True):
         """
         Mosaic all overlapping *skylines*.
 
@@ -383,6 +427,9 @@ class SkyLine(object):
         ----------
         skylines : list
             A list of `SkyLine` objects.
+
+        verbose : bool
+            Print info to screen.
 
         Returns
         -------
@@ -401,16 +448,25 @@ class SkyLine(object):
         """
         out_order = []
         excluded  = []
+
+        if verbose:
+            print('***** SKYLINE MOSAIC *****')
         
         starting_pair = cls.max_overlap_pair(skylines)
         if starting_pair is None:
+            if verbose:
+                print('    Cannot find any overlapping skylines. Aborting...')
             return starting_pair, out_order, excluded
 
         remaining = list(skylines)
 
         s1, s2 = starting_pair
+        if verbose:
+            print('    Starting pair: %s, %s' %
+                  (s1._rough_id(), s2._rough_id()))
+
         mosaic = s1.add_image(s2)
-        out_order = [s1.members[0].fname, s2.members[0].fname]
+        out_order = [s1._rough_id(), s2._rough_id()]
         remaining.remove(s1)
         remaining.remove(s2)
 
@@ -419,13 +475,26 @@ class SkyLine(object):
 
             if next_skyline is None:
                 for r in remaining:
-                    excluded.append(r.members[0].fname)
+                    if verbose:
+                        print('    No overlap: Excluding %s...' % r._rough_id())
+                    excluded.append(r._rough_id())
                 break
 
-            new_mos = mosaic.add_image(next_skyline)
-            mosaic = new_mos
-            out_order.append(next_skyline.members[0].fname)
-            remaining.remove(next_skyline)
+            try:
+                new_mos = mosaic.add_image(next_skyline)
+            except (ValueError, AssertionError):
+                if SKYLINE_DEBUG:
+                    print('WARNING: Cannot add %s to mosaic. Skipping it...' %
+                          next_skyline._rough_id())
+                    excluded.append(next_skyline._rough_id())
+                else:
+                    raise
+            else:
+                print('    Adding %s to mosaic...' % next_skyline._rough_id())
+                mosaic = new_mos
+                out_order.append(next_skyline._rough_id())
+            finally:
+                remaining.remove(next_skyline)
 
         return mosaic, out_order, excluded
 

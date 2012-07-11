@@ -367,7 +367,7 @@ class SphericalPolygon(object):
             `True` or `False`.
         """
         self_n = len(self.points)
-        
+
         if self_n != len(other.points):
             return False
 
@@ -376,10 +376,10 @@ class SphericalPolygon(object):
 
         self_a = self.area()
         is_same_limit = thres * self_a
-        
+
         if np.abs(self_a - other.area()) > is_same_limit:
             return False
-        
+
         if do_sort:
             self_pts  = self._sorted_points(preserve_order=False, unique=True)
             other_pts = other._sorted_points(preserve_order=False, unique=True)
@@ -388,7 +388,7 @@ class SphericalPolygon(object):
             other_pts = other.points
 
         is_eq = True
-        
+
         for self_p, other_p in zip(self_pts, other_pts):
             x_sum = 0.0
 
@@ -696,6 +696,9 @@ class SphericalPolygon(object):
         #     return self.__class__([], [0, 0, 0])
 
         from . import graph
+        if len(self._points) < 3 or len(other._points) < 3:
+            return self.__class__([], [0, 0, 0])
+
         g = graph.Graph([self, other])
 
         polygon = g.intersection()

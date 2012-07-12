@@ -89,7 +89,7 @@ SKYLINE_DEBUG = True
 
 __all__ = ['SkyLineMember', 'SkyLine']
 __version__ = '0.4a'
-__vdate__ = '11-Jul-2012'
+__vdate__ = '12-Jul-2012'
 
 class SkyLineMember(object):
     """
@@ -248,6 +248,16 @@ class SkyLine(object):
             if v not in self._members:
                 self._members.append(v)
 
+    def _indv_mem_wcslist(self):
+        """List of original HSTWCS from each EXT in each member."""
+        wcs_list = []
+        
+        for m in self.members:
+            for i in m.ext:
+                wcs_list.append(wcsutil.HSTWCS(m.fname, ext=i))
+
+        return wcs_list
+
     def to_wcs(self):
         """
         Combine `HSTWCS` objects from all `members` and return
@@ -256,14 +266,13 @@ class SkyLine(object):
         .. warning:: This cannot return WCS of intersection.
 
         """
-        wcs_list = []
-        
-        for m in self.members:
-            for i in m.ext:
-                wcs_list.append(wcsutil.HSTWCS(m.fname, ext=i))
+        wcs_list = self._indv_mem_wcslist()
 
-        if len(wcs_list) > 0:
+        n = len(wcs_list)
+        if n > 1:
             wcs = output_wcs(wcs_list)
+        elif n == 1:
+            wcs = wcs_list[0]
         else:
             wcs = None
 
@@ -288,10 +297,11 @@ class SkyLine(object):
         **kwargs : Any plot arguments to pass to basemap
 
         """
-        for m in self.members:
-            for i in m.ext:
-                poly = SphericalPolygon.from_wcs(wcsutil.HSTWCS(m.fname, ext=i))
-                poly.draw(map, **kwargs)
+        wcs_list = self._indv_mem_wcslist()
+        
+        for wcs in wcs_list:
+            poly = SphericalPolygon.from_wcs(wcs)
+            poly.draw(map, **kwargs)
 
     def _find_members(self, given_members):
         """

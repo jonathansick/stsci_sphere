@@ -120,13 +120,12 @@ class SphericalPolygon(object):
 
         Returns
         -------
-        zip(ra,dec) : list of tuples
-            List of (*ra*, *dec*) pairs in degrees corresponding
+        ra, dec : list of float
+            List of *ra* and *dec* in degrees corresponding
             to `points`.
         """
-        ra, dec = vector.vector_to_radec(self.points[:,0], self.points[:,1],
-                                         self.points[:,2], degrees=True)
-        return zip(ra,dec)
+        return vector.vector_to_radec(self.points[:,0], self.points[:,1],
+                                      self.points[:,2], degrees=True)
 
     @classmethod
     def from_radec(cls, ra, dec, center=None, degrees=True):

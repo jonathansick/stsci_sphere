@@ -100,12 +100,12 @@ def test_sphericalpolygon():
     
     assert_almost_equal(im_2chipA.area(), im_2chipB.area())
 
-    radecs = im_2chipA.to_radec()
+    ra_A, dec_A = im_2chipA.to_radec()
     for i in xrange(len(im_2chipA.points)):
         p = im_2chipA.points[i]
         ra, dec = vector_to_radec(p[0], p[1], p[2], degrees=True)
-        assert_almost_equal(radecs[i][0], ra)
-        assert_almost_equal(radecs[i][1], dec)
+        assert_almost_equal(ra_A[i], ra)
+        assert_almost_equal(dec_A[i], dec)
 
 
 #----- WCS -----

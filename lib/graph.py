@@ -50,7 +50,7 @@ from . import great_circle_arc
 from . import vector
 
 # Set to True to enable some sanity checks
-DEBUG = False
+DEBUG = True
 
 
 class Graph:
@@ -65,7 +65,7 @@ class Graph:
     """
 
     class Node:
-        """       
+        """
         A `~Graph.Node` represents a single point, connected by an arbitrary
         number of `~Graph.Edge` objects to other `~Graph.Node` objects.
         """
@@ -267,6 +267,7 @@ class Graph:
         node : `~Graph.Node` instance
             The new node
         """
+        point = vector.normalize_vector(*point)
         new_node = self.Node(point, source_polygons)
 
         # Don't add nodes that already exist.  Update the existing

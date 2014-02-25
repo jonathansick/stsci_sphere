@@ -50,7 +50,7 @@ from . import great_circle_arc
 from . import vector
 
 # Set to True to enable some sanity checks
-DEBUG = True
+DEBUG = False
 
 
 class Graph:

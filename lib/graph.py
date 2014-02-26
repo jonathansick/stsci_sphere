@@ -242,9 +242,9 @@ class Graph:
         if self._start_node is None:
             self._start_node = start_node
         for i in range(1, len(points) - 1):
+            nodeB = self.add_node(points[i], [polygon])
             # Don't create self-pointing edges
-            if not np.array_equal(points[i], nodeA._point):
-                nodeB = self.add_node(points[i], [polygon])
+            if nodeB is not nodeA:
                 self.add_edge(nodeA, nodeB, [polygon])
                 nodeA = nodeB
         # Close the polygon
@@ -321,15 +321,20 @@ class Graph:
         assert A in self._nodes
         assert B in self._nodes
 
-        new_edge = self.Edge(A, B, source_polygons)
-
         # Don't add any edges that already exist.  Update the edge's
-        # source polygons list to include the new polygon.
+        # source polygons list to include the new polygon.  Care needs
+        # to be taken here to not create an Edge until we know we need
+        # one, otherwise the Edge will get hooked up to the nodes but
+        # be orphaned.
         for edge in self._edges:
-            if edge.equals(new_edge):
+            if ((A.equals(edge._nodes[0]) and
+                 B.equals(edge._nodes[1])) or
+                (B.equals(edge._nodes[0]) and
+                 A.equals(edge._nodes[1]))):
                 edge._source_polygons.update(source_polygons)
                 return edge
 
+        new_edge = self.Edge(A, B, source_polygons)
         self._edges.add(new_edge)
         return new_edge
 
@@ -382,7 +387,8 @@ class Graph:
         A, B = edge._nodes
         edgeA = self.add_edge(A, node, edge._source_polygons)
         edgeB = self.add_edge(node, B, edge._source_polygons)
-        self.remove_edge(edge)
+        if edge not in (edgeA, edgeB):
+            self.remove_edge(edge)
         return [edgeA, edgeB]
 
     def _sanity_check(self, title, node_is_2=False):
@@ -602,6 +608,37 @@ class Graph:
         edges = list(self._edges)
         starts, ends = get_edge_points(edges)
 
+        # First, split all edges by any nodes that intersect them
+        while len(edges) > 1:
+            AB = edges.pop(0)
+            A = starts[0]; starts = starts[1:]  # numpy equiv of "pop(0)"
+            B = ends[0];   ends = ends[1:]      # numpy equiv of "pop(0)"
+
+            distance = great_circle_arc.length(A, B)
+            for node in self._nodes:
+                if node not in AB._nodes:
+                    distanceA = great_circle_arc.length(node._point, A)
+                    distanceB = great_circle_arc.length(node._point, B)
+                    if np.abs((distanceA + distanceB) - distance) < 1e-8:
+                        newA, newB = self.split_edge(AB, node)
+
+                        new_edges = [
+                            edge for edge in (newA, newB)
+                            if edge not in edges]
+
+                        edges = new_edges + edges
+                        new_starts, new_ends = get_edge_points(new_edges)
+                        starts = np.vstack(
+                            (new_starts, starts))
+                        ends = np.vstack(
+                            (new_ends, ends))
+                        break
+
+        edges = list(self._edges)
+        starts, ends = get_edge_points(edges)
+
+        # Next, calculate edge-to-edge intersections and break
+        # edges on the intersection point.
         while len(edges) > 1:
             AB = edges.pop(0)
             A = starts[0]; starts = starts[1:]  # numpy equiv of "pop(0)"
@@ -624,9 +661,6 @@ class Graph:
             for j in intersection_indices:
                 C = starts[j]
                 D = ends[j]
-                if (np.array_equal(C, A) or np.array_equal(C, B) or
-                    np.array_equal(D, A) or np.array_equal(D, B)):
-                    continue
 
                 CD = edges[j]
                 E = intersections[j]
@@ -648,7 +682,9 @@ class Graph:
                 newA, newB = self.split_edge(AB, E)
                 newC, newD = self.split_edge(CD, E)
 
-                new_edges = [newA, newB, newC, newD]
+                new_edges = [
+                    edge for edge in (newA, newB, newC, newD)
+                    if edge not in edges]
 
                 # Delete CD, and push the new edges to the
                 # front so they will be tested for intersection

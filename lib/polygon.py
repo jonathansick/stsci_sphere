@@ -78,12 +78,18 @@ class SphericalPolygon(object):
             mean of the points will be used.
         """
         if len(points) == 0:
-            pass
+            # handle special case of initializing with an empty list of
+            # vertices (ticket #1079).
+            self._inside = np.zeros(3)
+            self._points = np.asanyarray(points)
+            return
         elif len(points) < 3:
             raise ValueError("Polygon made of too few points")
         else:
             assert np.array_equal(points[0], points[-1]), 'Polygon is not closed'
+
         self._points = np.asanyarray(points)
+
         if inside is None:
             self._inside = np.mean(points[:-1], axis=0)
         else:

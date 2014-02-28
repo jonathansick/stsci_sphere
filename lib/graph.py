@@ -50,7 +50,7 @@ from . import great_circle_arc
 from . import vector
 
 # Set to True to enable some sanity checks
-DEBUG = False
+DEBUG = True
 
 
 class Graph:
@@ -78,6 +78,8 @@ class Graph:
             source_polygon : `~sphere.polygon.SphericalPolygon` instance, optional
                 The polygon(s) this node came from.  Used for bookkeeping.
             """
+            point = vector.normalize_vector(*point)
+
             self._point = np.asanyarray(point)
             self._source_polygons = set(source_polygons)
             self._edges = weakref.WeakSet()
@@ -267,7 +269,6 @@ class Graph:
         node : `~Graph.Node` instance
             The new node
         """
-        point = vector.normalize_vector(*point)
         new_node = self.Node(point, source_polygons)
 
         # Don't add nodes that already exist.  Update the existing
@@ -661,7 +662,6 @@ class Graph:
             for j in intersection_indices:
                 C = starts[j]
                 D = ends[j]
-
                 CD = edges[j]
                 E = intersections[j]
 

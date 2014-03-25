@@ -1,9 +1,9 @@
 User documentation
 ==================
 
-.. currentmodule:: sphere
+.. currentmodule:: stsci.sphere
 
-The `sphere` library is a pure Python package for handling spherical
+The `stsci.sphere` library is a pure Python package for handling spherical
 polygons that represent arbitrary regions of the sky.
 
 Requirements
@@ -28,7 +28,7 @@ While these representations are convenient, they have discontinuities
 at the poles, making operations on them trickier at arbitrary
 locations on the sky sphere.  Therefore, all internal operations of
 this library are done in 3D vector space, where coordinates are
-represented as (*x*, *y*, *z*) vectors.  The `sphere.vector` module
+represented as (*x*, *y*, *z*) vectors.  The `stsci.sphere.vector` module
 contains functions to convert between (*ra*, *dec*) and (*x*, *y*,
 *z*) representations.
 
@@ -44,7 +44,7 @@ defined as a vector whose length is 1, i.e.:
 
 To prevent unnecessary recomputation, many methods in this library
 assume that the vectors passed in are already normalized.  If this is
-not the case, `sphere.vector.normalize_vector` can be used to
+not the case, `stsci.sphere.vector.normalize_vector` can be used to
 normalize an array of vectors.
 
 The library allows the user to work in either degrees or radians.  All
@@ -57,7 +57,7 @@ Spherical polygons
 
 Spherical polygons are arbitrary areas on the sky sphere enclosed by
 great circle arcs.  They are represented by the
-`~sphere.polygon.SphericalPolygon` class.
+`~stsci.sphere.polygon.SphericalPolygon` class.
 
 Representation
 ``````````````
@@ -102,7 +102,7 @@ a hole and a disjoint region connected by cut lines.
 Creating spherical polygons
 ```````````````````````````
 
-.. currentmodule:: sphere.polygon
+.. currentmodule:: stsci.sphere.polygon
 
 `SphericalPolygon` objects have 4 different constructors:
 
@@ -156,10 +156,10 @@ operations available:
 Great circle arcs
 -----------------
 
-.. currentmodule:: sphere.great_circle_arc
+.. currentmodule:: stsci.sphere.great_circle_arc
 
 As seen above, great circle arcs are used to define the edges of the
-polygon.  The `sphere.great_circle_arc` module contains a number of
+polygon.  The `stsci.sphere.great_circle_arc` module contains a number of
 functions that are useful for dealing with them.
 
 - `length`: Returns the angular distance between two points on the sphere.
@@ -172,83 +172,3 @@ functions that are useful for dealing with them.
 - `angle`: Calculate the angle between two great circle arcs.
 
 - `midpoint`: Calculate the midpoint along a great circle arc.
-
-Skylines
---------
-
-Skylines are designed to capture and manipulate HST WCS image information as
-spherical polygons. They are represented by the `~sphere.skyline.SkyLine` class,
-which is an extension of `~sphere.polygon.SphericalPolygon` class.
-
-Representation
-``````````````
-Each skyline has a list of members, `~sphere.skyline.SkyLine.members`, and a
-composite spherical polygon, `~sphere.skyline.SkyLine.polygon`, defined by those
-members. The polygon has all the functionalities of
-`~sphere.polygon.SphericalPolygon`.
-
-What is a skyline member?
-^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Each member in `~sphere.skyline.SkyLine.members` belongs to the
-`~sphere.skyline.SkyLineMember` class, which contains image name (with path if
-given), science extension(s), and composite WCS and polygon of the extension(s).
-All skylines start out with a single member from a single image. When operations
-are used to find composite or intersecting skylines, the resulting skyline can
-have multiple members.
-
-For example, a skyline from an ACS/WFC full-frame image would give 1 member,
-which is a composite of extensions 1 and 4. A skyline from the union of 2 such
-images would have 2 members, and so forth.
-
-Creating skylines
-`````````````````
-
-`~sphere.skyline.SkyLine` constructor takes an image name and an optional
-`extname` keyword, which defaults to "SCI". To create skyline from
-single-extension FITS, change `extname` to "PRIMARY".
-
-If `None` is given instead of image name, an empty skyline is created with no
-member and an empty spherical polygon.
-
-Operations on skylines
-``````````````````````
-
-`~sphere.skyline.SkyLine` has direct access to most of the
-`~sphere.polygon.SphericalPolygon` properties and methods *except* for the
-following (which are still accessible indirectly via
-`~sphere.skyline.SkyLine.polygon`):
-
-  - `~sphere.polygon.SphericalPolygon.from_radec`
-  - `~sphere.polygon.SphericalPolygon.from_cone`
-  - `~sphere.polygon.SphericalPolygon.from_wcs`
-  - `~sphere.polygon.SphericalPolygon.multi_union`
-  - `~sphere.polygon.SphericalPolygon.multi_intersection`
-
-In addition, `~sphere.skyline.SkyLine` also has these operations available:
-
-  - `~sphere.skyline.SkyLine.to_wcs`: Return a composite HST WCS object defined
-    by all the members. In a skyline resulting from intersection, this does
-    *not* return the WCS of the intersecting polygons.
-
-  - `~sphere.skyline.SkyLine.add_image`: Return a new skyline that is the union
-    of two skylines. This should be used, *not* `SkyLine.union` (which is
-    actually `~sphere.polygon.SphericalPolygon.union`) that will not include
-    members.
-
-  - `~sphere.skyline.SkyLine.find_intersection`: Return a new skyline that is
-    the intersection of two skylines. This should be used, *not*
-    `SkyLine.intersection` (which is actually
-    `~sphere.polygon.SphericalPolygon.intersection`) that will not include
-    members.
-
-  - `~sphere.skyline.SkyLine.find_max_overlap` and
-    `~sphere.skyline.SkyLine.max_overlap_pair`: Return a pair of skylines that
-    overlap the most from a given list of skylines.
-
-  - `~sphere.skyline.SkyLine.mosaic`: Return a new skyline that is a mosaic of
-    given skylines that overlap, a list of image names of the skylines used, and
-    a list of image names of the excluded skylines. A pair of skylines with the
-    most overlap is used as a starting point. Then a skyline that overlaps the
-    most with the mosaic is used, and so forth until no overlapping skyline is
-    found.

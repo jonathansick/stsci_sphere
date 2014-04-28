@@ -254,8 +254,10 @@ class SphericalPolygon(object):
         -------
         polygon : `SphericalPolygon` object
         """
-        import pywcs
-        import pyfits
+        #import pywcs
+        #import pyfits
+        from astropy import wcs as pywcs
+        from astropy.io import fits as pyfits
 
         if isinstance(fitspath, pyfits.Header):
             header = fitspath
@@ -266,7 +268,7 @@ class SphericalPolygon(object):
             wcs = pywcs.WCS(fitspath)
         if crval is not None:
             wcs.wcs.crval = crval
-        xa, ya = [wcs.naxis1, wcs.naxis2]
+        xa, ya = [wcs._naxis1, wcs._naxis2]
 
         length = steps * 4 + 1
         X = np.empty(length)
@@ -285,13 +287,13 @@ class SphericalPolygon(object):
         Y[-1]              = 1
 
         # Use wcslib to convert to (ra, dec)
-        ra, dec = wcs.all_pix2sky(X, Y, 1)
+        ra, dec = wcs.all_pix2world(X, Y, 1)
 
         # Convert to Cartesian
         x, y, z = vector.radec_to_vector(ra, dec)
 
         # Calculate an inside point
-        ra, dec = wcs.all_pix2sky(xa / 2.0, ya / 2.0, 1)
+        ra, dec = wcs.all_pix2world(xa / 2.0, ya / 2.0, 1)
         xc, yc, zc = vector.radec_to_vector(ra, dec)
 
         return cls(np.dstack((x, y, z))[0], (xc[0], yc[0], zc[0]))

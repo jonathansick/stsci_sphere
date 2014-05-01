@@ -239,11 +239,11 @@ class SphericalPolygon(object):
         Create a new `SphericalPolygon` from the footprint of a FITS
         WCS specification.
 
-        This method requires having `pywcs` and `pyfits` installed.
+        This method requires having `astropy` installed.
 
         Parameters
         ----------
-        fitspath : path to a FITS file, `pyfits.Header`, or `pywcs.WCS`
+        fitspath : path to a FITS file, `astropy.io.fits.Header`, or `astropy.wcs.WCS`
             Refers to a FITS header containing a WCS specification.
 
         steps : int, optional
@@ -254,12 +254,10 @@ class SphericalPolygon(object):
         -------
         polygon : `SphericalPolygon` object
         """
-        #import pywcs
-        #import pyfits
         from astropy import wcs as pywcs
-        from astropy.io import fits as pyfits
+        from astropy.io import fits
 
-        if isinstance(fitspath, pyfits.Header):
+        if isinstance(fitspath, fits.Header):
             header = fitspath
             wcs = pywcs.WCS(header)
         elif isinstance(fitspath, pywcs.WCS):
@@ -296,7 +294,7 @@ class SphericalPolygon(object):
         ra, dec = wcs.all_pix2world(xa / 2.0, ya / 2.0, 1)
         xc, yc, zc = vector.radec_to_vector(ra, dec)
 
-        return cls(np.dstack((x, y, z))[0], (xc[0], yc[0], zc[0]))
+        return cls(np.dstack((x, y, z))[0], (xc, yc, zc))
 
     def _unique_points(self):
         """
